@@ -23,6 +23,7 @@ func (s *arrayUint32) Close() {
 	s.keys.Dealloc()
 }
 
+//nolint:golint,unused
 func (s *arrayUint32) idx(key ArrayUint32Key) int {
 	return sort.Search(s.Size(), func(i int) bool { return s.keys.Get(i) >= key })
 }
