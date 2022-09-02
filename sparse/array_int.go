@@ -30,7 +30,7 @@ func (s *ArrayInt) Close() {
 	s.values.Dealloc()
 }
 
-func (s *ArrayInt) Add(key ArrayInterfaceKey, val int) {
+func (s *ArrayInt) Add(key ArrayUint64Key, val int) {
 	i := s.idx(key)
 	if i < s.keys.Len() && s.keys.Get(i) == key {
 		s.values.Set(i, val)
@@ -43,14 +43,14 @@ func (s *ArrayInt) Add(key ArrayInterfaceKey, val int) {
 	s.values.Insert(i, val)
 }
 
-func (s *ArrayInt) Get(key ArrayInterfaceKey) int {
+func (s *ArrayInt) Get(key ArrayUint64Key) int {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		return s.values.Get(i)
 	}
 	return NoValue
 }
 
-func (s *ArrayInt) Delete(key ArrayInterfaceKey) (prev int) {
+func (s *ArrayInt) Delete(key ArrayUint64Key) (prev int) {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		prev = s.values.Get(i)
 		s.values.Set(i, NoValue)
@@ -99,7 +99,7 @@ func NewArrayIntBuilder(preallocate int, grow float64) *ArrayIntBuilder {
 	}
 }
 
-func (b *ArrayIntBuilder) Add(key ArrayInterfaceKey, value int) {
+func (b *ArrayIntBuilder) Add(key ArrayUint64Key, value int) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -108,7 +108,7 @@ func (b *ArrayIntBuilder) Add(key ArrayInterfaceKey, value int) {
 	b.s.values.Append(value)
 }
 
-func (b *ArrayIntBuilder) Delete(key ArrayInterfaceKey) {
+func (b *ArrayIntBuilder) Delete(key ArrayUint64Key) {
 	if b.shouldSort {
 		b.sort()
 	}

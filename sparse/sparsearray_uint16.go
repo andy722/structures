@@ -30,7 +30,7 @@ func (s *ArrayUint16) Close() {
 	s.values.Dealloc()
 }
 
-func (s *ArrayUint16) Add(key ArrayInterfaceKey, val offheap.ArrayUint16Value) {
+func (s *ArrayUint16) Add(key ArrayUint64Key, val offheap.ArrayUint16Value) {
 	i := s.idx(key)
 	if i < s.keys.Len() && s.keys.Get(i) == key {
 		s.values.Set(i, val)
@@ -43,14 +43,14 @@ func (s *ArrayUint16) Add(key ArrayInterfaceKey, val offheap.ArrayUint16Value) {
 	s.values.Insert(i, val)
 }
 
-func (s *ArrayUint16) Get(key ArrayInterfaceKey) offheap.ArrayUint16Value {
+func (s *ArrayUint16) Get(key ArrayUint64Key) offheap.ArrayUint16Value {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		return s.values.Get(i)
 	}
 	return ArrayUint16NoValue
 }
 
-func (s *ArrayUint16) Delete(key ArrayInterfaceKey) (prev offheap.ArrayUint16Value) {
+func (s *ArrayUint16) Delete(key ArrayUint64Key) (prev offheap.ArrayUint16Value) {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		prev = s.values.Get(i)
 		s.values.Set(i, ArrayUint16NoValue)
@@ -103,7 +103,7 @@ func NewArrayUint16Builder1(preallocate int, grow float64) *ArrayUint16Builder {
 	}
 }
 
-func (b *ArrayUint16Builder) Add(key ArrayInterfaceKey, value offheap.ArrayUint16Value) {
+func (b *ArrayUint16Builder) Add(key ArrayUint64Key, value offheap.ArrayUint16Value) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -112,7 +112,7 @@ func (b *ArrayUint16Builder) Add(key ArrayInterfaceKey, value offheap.ArrayUint1
 	b.s.values.Append(value)
 }
 
-func (b *ArrayUint16Builder) Delete(key ArrayInterfaceKey) {
+func (b *ArrayUint16Builder) Delete(key ArrayUint64Key) {
 	if b.shouldSort {
 		b.sort()
 	}

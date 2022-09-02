@@ -5,6 +5,8 @@ import (
 	"sort"
 )
 
+type ArrayUint64Key = uint64
+
 // arrayUint64 provides an off-heap map with numeric keys, internally represented as sparse array
 type arrayUint64 struct {
 	preallocate int
@@ -21,7 +23,7 @@ func (s *arrayUint64) Close() {
 	s.keys.Dealloc()
 }
 
-func (s *arrayUint64) idx(key ArrayInterfaceKey) int {
+func (s *arrayUint64) idx(key ArrayUint64Key) int {
 	return sort.Search(s.Size(), func(i int) bool { return s.keys.Get(i) >= key })
 }
 

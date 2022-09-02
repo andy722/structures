@@ -5,6 +5,8 @@ import (
 	"sort"
 )
 
+type ArrayUint32Key = uint32
+
 // arrayUint32 provides an off-heap map with numeric keys, internally represented as sparse array
 type arrayUint32 struct {
 	preallocate int

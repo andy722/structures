@@ -8,9 +8,6 @@ import (
 const DefaultPreallocate = 17_000_000
 const DefaultGrow = 1.25
 
-type ArrayInterfaceKey = uint64
-type ArrayUint32Key = uint32
-
 // ArrayInterface provides an off-heap map with numeric keys, internally represented as sparse array
 type ArrayInterface struct {
 	arrayUint64
@@ -34,7 +31,7 @@ func (s *ArrayInterface) Close() {
 	s.values.Dealloc()
 }
 
-func (s *ArrayInterface) Add(key ArrayInterfaceKey, val interface{}) {
+func (s *ArrayInterface) Add(key ArrayUint64Key, val interface{}) {
 	i := s.idx(key)
 	if i < s.keys.Len() && s.keys.Get(i) == key {
 		s.values.Set(i, val)
@@ -47,14 +44,14 @@ func (s *ArrayInterface) Add(key ArrayInterfaceKey, val interface{}) {
 	s.values.Insert(i, val)
 }
 
-func (s *ArrayInterface) Get(key ArrayInterfaceKey) interface{} {
+func (s *ArrayInterface) Get(key ArrayUint64Key) interface{} {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		return s.values.Get(i)
 	}
 	return nil
 }
 
-func (s *ArrayInterface) Delete(key ArrayInterfaceKey) (prev interface{}) {
+func (s *ArrayInterface) Delete(key ArrayUint64Key) (prev interface{}) {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		prev = s.values.Get(i)
 		s.values.Set(i, nil)
@@ -106,7 +103,7 @@ func NewArrayInterfaceBuilder1(preallocate int, grow float64) *ArrayInterfaceBui
 	}
 }
 
-func (b *ArrayInterfaceBuilder) Add(key ArrayInterfaceKey, value interface{}) {
+func (b *ArrayInterfaceBuilder) Add(key ArrayUint64Key, value interface{}) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -115,7 +112,7 @@ func (b *ArrayInterfaceBuilder) Add(key ArrayInterfaceKey, value interface{}) {
 	b.s.values.Append(value)
 }
 
-func (b *ArrayInterfaceBuilder) Delete(key ArrayInterfaceKey) {
+func (b *ArrayInterfaceBuilder) Delete(key ArrayUint64Key) {
 	if b.shouldSort {
 		b.sort()
 	}

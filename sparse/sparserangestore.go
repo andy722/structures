@@ -24,7 +24,7 @@ func NewSparseRangeStore(initialSize int, grow float64) RangeStore {
 	}
 }
 
-func (s *RangeStore) Get(key ArrayInterfaceKey) (v1 uint16, v2 uint16, exists bool) {
+func (s *RangeStore) Get(key ArrayUint64Key) (v1 uint16, v2 uint16, exists bool) {
 	idx := sort.Search(s.Size(), func(i int) bool { return s.from.Get(i) >= key })
 	if idx >= s.Size() {
 		// Check if the last element matches
@@ -50,7 +50,7 @@ func (s *RangeStore) ValuesV2(callback func(uint16)) {
 	s.v2.Values(callback)
 }
 
-func (s *RangeStore) checkMatch(key ArrayInterfaceKey, idx int) (v1, v2 uint16, exists bool) {
+func (s *RangeStore) checkMatch(key ArrayUint64Key, idx int) (v1, v2 uint16, exists bool) {
 	if rangeStart := s.from.Get(idx); rangeStart > key {
 		return
 	}
@@ -100,19 +100,19 @@ func (s *RangeStore) Close() {
 	s.v2.Dealloc()
 }
 
-type Sparse struct {
+type RangeStoreBuilder struct {
 	s          RangeStore
 	shouldSort bool
 }
 
 //goland:noinspection GoUnusedExportedFunction
-func NewRangeStoreBuilder(initialSize int) Sparse {
-	return Sparse{
+func NewRangeStoreBuilder(initialSize int) RangeStoreBuilder {
+	return RangeStoreBuilder{
 		s: NewSparseRangeStore(initialSize, 1.25),
 	}
 }
 
-func (b *Sparse) Add(fromIncl, toIncl _range.RangePoint, v1, v2 uint16) {
+func (b *RangeStoreBuilder) Add(fromIncl, toIncl _range.RangePoint, v1, v2 uint16) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -123,7 +123,7 @@ func (b *Sparse) Add(fromIncl, toIncl _range.RangePoint, v1, v2 uint16) {
 	b.s.v2.Append(v2)
 }
 
-func (b *Sparse) Build() RangeStore {
+func (b *RangeStoreBuilder) Build() RangeStore {
 	if b.shouldSort {
 		b.sort()
 	}
@@ -133,7 +133,7 @@ func (b *Sparse) Build() RangeStore {
 	return b.s
 }
 
-func (b *Sparse) sort() {
+func (b *RangeStoreBuilder) sort() {
 	sort.Sort(sparseRangeSorter(func() *RangeStore { return &b.s }))
 	b.shouldSort = false
 }
