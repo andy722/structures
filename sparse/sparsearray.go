@@ -8,72 +8,33 @@ import (
 const DefaultPreallocate = 17_000_000
 const DefaultGrow = 1.25
 
-type SparseArrayKey = uint64
-type SparseArrayUint32Key = uint32
+type ArrayInterfaceKey = uint64
+type ArrayUint32Key = uint32
 
-// SparseArray provides an off-heap map with numeric keys, internally represented as sparse array
-type sparseArray struct {
-	preallocate int
-	grow        float64
+// ArrayInterface provides an off-heap map with numeric keys, internally represented as sparse array
+type ArrayInterface struct {
+	arrayUint64
 
-	keys *offheap.OffHeapArrayUint64
+	values *offheap.ArrayInterface
 }
 
-type sparseArrayUint32 struct {
-	preallocate int
-	grow        float64
-
-	keys *offheap.OffHeapArrayUint32
-}
-
-// SparseArray provides an off-heap map with numeric keys, internally represented as sparse array
-type SparseArray struct {
-	sparseArray
-
-	values *offheap.OffHeapArrayInterface
-}
-
-func NewSparseArray(preallocate int, grow float64) *SparseArray {
-	return &SparseArray{
-		sparseArray{
+func NewSparseArray(preallocate int, grow float64) *ArrayInterface {
+	return &ArrayInterface{
+		arrayUint64{
 			preallocate,
 			grow,
-			offheap.NewOffHeapArrayUint64(preallocate),
+			offheap.NewArrayUint64(preallocate),
 		},
-		offheap.NewOffHeapArrayInterface(preallocate),
+		offheap.NewArrayInterface(preallocate),
 	}
 }
 
-func (s *sparseArray) Size() int {
-	return s.keys.Len()
-}
-
-func (s *sparseArray) Close() {
-	s.keys.Dealloc()
-}
-
-func (s *sparseArrayUint32) Size() int {
-	return s.keys.Len()
-}
-
-func (s *sparseArrayUint32) Close() {
-	s.keys.Dealloc()
-}
-
-func (s *SparseArray) Close() {
-	s.sparseArray.Close()
+func (s *ArrayInterface) Close() {
+	s.arrayUint64.Close()
 	s.values.Dealloc()
 }
 
-func (s *sparseArray) cap() int {
-	return s.keys.Cap()
-}
-
-func (s *sparseArrayUint32) cap() int {
-	return s.keys.Cap()
-}
-
-func (s *SparseArray) Add(key SparseArrayKey, val interface{}) {
+func (s *ArrayInterface) Add(key ArrayInterfaceKey, val interface{}) {
 	i := s.idx(key)
 	if i < s.keys.Len() && s.keys.Get(i) == key {
 		s.values.Set(i, val)
@@ -86,14 +47,14 @@ func (s *SparseArray) Add(key SparseArrayKey, val interface{}) {
 	s.values.Insert(i, val)
 }
 
-func (s *SparseArray) Get(key SparseArrayKey) interface{} {
+func (s *ArrayInterface) Get(key ArrayInterfaceKey) interface{} {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		return s.values.Get(i)
 	}
 	return nil
 }
 
-func (s *SparseArray) Delete(key SparseArrayKey) (prev interface{}) {
+func (s *ArrayInterface) Delete(key ArrayInterfaceKey) (prev interface{}) {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		prev = s.values.Get(i)
 		s.values.Set(i, nil)
@@ -101,15 +62,7 @@ func (s *SparseArray) Delete(key SparseArrayKey) (prev interface{}) {
 	return
 }
 
-func (s *sparseArray) idx(key SparseArrayKey) int {
-	return sort.Search(s.Size(), func(i int) bool { return s.keys.Get(i) >= key })
-}
-
-func (s *sparseArrayUint32) idx(key SparseArrayUint32Key) int {
-	return sort.Search(s.Size(), func(i int) bool { return s.keys.Get(i) >= key })
-}
-
-func (s *SparseArray) growBackingArraysIfNeeded() {
+func (s *ArrayInterface) growBackingArraysIfNeeded() {
 	size := s.Size()
 	if size < s.cap() {
 		return
@@ -121,7 +74,7 @@ func (s *SparseArray) growBackingArraysIfNeeded() {
 	s.values = s.values.Grow(newSize)
 }
 
-func (s *SparseArray) cleanup() {
+func (s *ArrayInterface) cleanup() {
 	for i := s.Size() - 1; i >= 0; i-- {
 		if s.values.Get(i) == nil {
 			s.keys.Remove(i)
@@ -130,30 +83,30 @@ func (s *SparseArray) cleanup() {
 	}
 }
 
-func (s *SparseArray) shrink() {
+func (s *ArrayInterface) shrink() {
 	if size := s.Size(); size < s.cap() {
 		s.keys = s.keys.TrimToSize()
 		s.values = s.values.TrimToSize()
 	}
 }
 
-type SparseArrayBuilder struct {
-	s             *SparseArray
+type ArrayInterfaceBuilder struct {
+	s             *ArrayInterface
 	shouldSort    bool // Marks as containing non-sorted data, need to sort prior to lookups
 	shouldCleanup bool // Marks as containing gaps, i.e. deleted entries
 }
 
-func NewSparseArrayBuilder() *SparseArrayBuilder {
-	return NewSparseArrayBuilder1(DefaultPreallocate, DefaultGrow)
+func NewArrayInterfaceBuilder() *ArrayInterfaceBuilder {
+	return NewArrayInterfaceBuilder1(DefaultPreallocate, DefaultGrow)
 }
 
-func NewSparseArrayBuilder1(preallocate int, grow float64) *SparseArrayBuilder {
-	return &SparseArrayBuilder{
+func NewArrayInterfaceBuilder1(preallocate int, grow float64) *ArrayInterfaceBuilder {
+	return &ArrayInterfaceBuilder{
 		s: NewSparseArray(preallocate, grow),
 	}
 }
 
-func (b *SparseArrayBuilder) Add(key SparseArrayKey, value interface{}) {
+func (b *ArrayInterfaceBuilder) Add(key ArrayInterfaceKey, value interface{}) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -162,7 +115,7 @@ func (b *SparseArrayBuilder) Add(key SparseArrayKey, value interface{}) {
 	b.s.values.Append(value)
 }
 
-func (b *SparseArrayBuilder) Delete(key SparseArrayKey) {
+func (b *ArrayInterfaceBuilder) Delete(key ArrayInterfaceKey) {
 	if b.shouldSort {
 		b.sort()
 	}
@@ -172,7 +125,7 @@ func (b *SparseArrayBuilder) Delete(key SparseArrayKey) {
 	}
 }
 
-func (b *SparseArrayBuilder) Build() *SparseArray {
+func (b *ArrayInterfaceBuilder) Build() *ArrayInterface {
 	if b.shouldCleanup {
 		b.s.cleanup()
 		b.shouldSort = true
@@ -188,26 +141,23 @@ func (b *SparseArrayBuilder) Build() *SparseArray {
 	return b.s
 }
 
-func (b *SparseArrayBuilder) sort() {
-	sort.Sort(sparseArraySorter(func() *SparseArray { return b.s }))
+func (b *ArrayInterfaceBuilder) sort() {
+	sort.Sort(sparseArraySorter(func() *ArrayInterface { return b.s }))
 	b.shouldSort = false
 }
 
-type sparseArraySorter func() *SparseArray
+type sparseArraySorter func() *ArrayInterface
 
 func (s sparseArraySorter) Len() int {
 	return s().Size()
 }
 
 func (s sparseArraySorter) Less(i, j int) bool {
-	keys := s().keys.slice
-	return keys[i] < keys[j]
+	keys := s().keys
+	return keys.Get(i) < keys.Get(j)
 }
 
 func (s sparseArraySorter) Swap(i, j int) {
-	keys := s().keys.slice
-	values := s().values.slice
-
-	keys[i], keys[j] = keys[j], keys[i]
-	values[i], values[j] = values[j], values[i]
+	s().keys.Swap(i, j)
+	s().values.Swap(i, j)
 }

@@ -6,16 +6,16 @@ import (
 	"unsafe"
 )
 
-type offHeapArray struct {
+type array struct {
 	sz  uintptr
 	cap int
 }
 
-func (o offHeapArray) Cap() int {
+func (o array) Cap() int {
 	return o.cap
 }
 
-func (o offHeapArray) allocSlice(len int) reflect.SliceHeader {
+func (o array) allocSlice(len int) reflect.SliceHeader {
 	noFd := -1
 
 	data, _, errno := syscall.Syscall6(
@@ -31,10 +31,6 @@ func (o offHeapArray) allocSlice(len int) reflect.SliceHeader {
 		panic(errno)
 	}
 
-	//if log.IsLevelEnabled(log.TraceLevel) {
-	//	log.Tracef("allocSlice(%d bytes): %d", uintptr(len)*o.sz, data)
-	//}
-
 	return reflect.SliceHeader{
 		Data: data,
 		Len:  0,
@@ -42,7 +38,7 @@ func (o offHeapArray) allocSlice(len int) reflect.SliceHeader {
 	}
 }
 
-func (o offHeapArray) deallocSlice(p unsafe.Pointer) {
+func (o array) deallocSlice(p unsafe.Pointer) {
 	hdr := (*reflect.SliceHeader)(p)
 
 	_, _, errno := syscall.Syscall(
@@ -51,10 +47,6 @@ func (o offHeapArray) deallocSlice(p unsafe.Pointer) {
 		o.sz*uintptr(o.cap),
 		0,
 	)
-
-	//if log.IsLevelEnabled(log.TraceLevel) {
-	//	log.Tracef("deallocSlice(%d bytes): %d", o.sz*uintptr(o.cap), hdr.Data)
-	//}
 
 	if errno != 0 {
 		panic(errno)

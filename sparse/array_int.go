@@ -7,30 +7,30 @@ import (
 
 const NoValue int = -1
 
-// SparseArrayInt provides an off-heap map with numeric keys, internally represented as sparse array
-type SparseArrayInt struct {
-	sparseArray
+// ArrayInt provides an off-heap map with numeric keys, internally represented as sparse array
+type ArrayInt struct {
+	arrayUint64
 
-	values *offheap.OffHeapArrayInt
+	values *offheap.ArrayInt
 }
 
-func NewSparseArrayInt(preallocate int, grow float64) *SparseArrayInt {
-	return &SparseArrayInt{
-		sparseArray{
+func NewSparseArrayInt(preallocate int, grow float64) *ArrayInt {
+	return &ArrayInt{
+		arrayUint64{
 			preallocate,
 			grow,
-			offheap.NewOffHeapArrayUint64(preallocate),
+			offheap.NewArrayUint64(preallocate),
 		},
-		offheap.NewOffHeapArrayInt(preallocate),
+		offheap.NewArrayInt(preallocate),
 	}
 }
 
-func (s *SparseArrayInt) Close() {
-	s.sparseArray.Close()
+func (s *ArrayInt) Close() {
+	s.arrayUint64.Close()
 	s.values.Dealloc()
 }
 
-func (s *SparseArrayInt) Add(key SparseArrayKey, val int) {
+func (s *ArrayInt) Add(key ArrayInterfaceKey, val int) {
 	i := s.idx(key)
 	if i < s.keys.Len() && s.keys.Get(i) == key {
 		s.values.Set(i, val)
@@ -43,14 +43,14 @@ func (s *SparseArrayInt) Add(key SparseArrayKey, val int) {
 	s.values.Insert(i, val)
 }
 
-func (s *SparseArrayInt) Get(key SparseArrayKey) int {
+func (s *ArrayInt) Get(key ArrayInterfaceKey) int {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		return s.values.Get(i)
 	}
 	return NoValue
 }
 
-func (s *SparseArrayInt) Delete(key SparseArrayKey) (prev int) {
+func (s *ArrayInt) Delete(key ArrayInterfaceKey) (prev int) {
 	if i := s.idx(key); i < s.Size() && s.keys.Get(i) == key {
 		prev = s.values.Get(i)
 		s.values.Set(i, NoValue)
@@ -58,7 +58,7 @@ func (s *SparseArrayInt) Delete(key SparseArrayKey) (prev int) {
 	return
 }
 
-func (s *SparseArrayInt) growBackingArraysIfNeeded() {
+func (s *ArrayInt) growBackingArraysIfNeeded() {
 	size := s.Size()
 	if size < s.cap() {
 		return
@@ -70,7 +70,7 @@ func (s *SparseArrayInt) growBackingArraysIfNeeded() {
 	s.values = s.values.Grow(newSize)
 }
 
-func (s *SparseArrayInt) cleanup() {
+func (s *ArrayInt) cleanup() {
 	for i := s.Size() - 1; i >= 0; i-- {
 		if s.values.Get(i) == NoValue {
 			s.keys.Remove(i)
@@ -79,26 +79,27 @@ func (s *SparseArrayInt) cleanup() {
 	}
 }
 
-func (s *SparseArrayInt) shrink() {
+func (s *ArrayInt) shrink() {
 	if size := s.Size(); size < s.cap() {
 		s.keys = s.keys.TrimToSize()
 		s.values = s.values.TrimToSize()
 	}
 }
 
-type SparseArrayIntBuilder struct {
-	s             *SparseArrayInt
+type ArrayIntBuilder struct {
+	s             *ArrayInt
 	shouldSort    bool // Marks as containing non-sorted data, need to sort prior to lookups
 	shouldCleanup bool // Marks as containing gaps, i.e. deleted entries
 }
 
-func NewSparseArrayIntBuilder(preallocate int, grow float64) *SparseArrayIntBuilder {
-	return &SparseArrayIntBuilder{
+//goland:noinspection GoUnusedExportedFunction
+func NewArrayIntBuilder(preallocate int, grow float64) *ArrayIntBuilder {
+	return &ArrayIntBuilder{
 		s: NewSparseArrayInt(preallocate, grow),
 	}
 }
 
-func (b *SparseArrayIntBuilder) Add(key SparseArrayKey, value int) {
+func (b *ArrayIntBuilder) Add(key ArrayInterfaceKey, value int) {
 	b.shouldSort = true
 
 	b.s.growBackingArraysIfNeeded()
@@ -107,7 +108,7 @@ func (b *SparseArrayIntBuilder) Add(key SparseArrayKey, value int) {
 	b.s.values.Append(value)
 }
 
-func (b *SparseArrayIntBuilder) Delete(key SparseArrayKey) {
+func (b *ArrayIntBuilder) Delete(key ArrayInterfaceKey) {
 	if b.shouldSort {
 		b.sort()
 	}
@@ -117,7 +118,7 @@ func (b *SparseArrayIntBuilder) Delete(key SparseArrayKey) {
 	}
 }
 
-func (b *SparseArrayIntBuilder) Build() *SparseArrayInt {
+func (b *ArrayIntBuilder) Build() *ArrayInt {
 	if b.shouldCleanup {
 		b.s.cleanup()
 		b.shouldCleanup = false
@@ -132,26 +133,30 @@ func (b *SparseArrayIntBuilder) Build() *SparseArrayInt {
 	return b.s
 }
 
-func (b *SparseArrayIntBuilder) sort() {
-	sort.Sort(sparseArrayIntSorter(func() *SparseArrayInt { return b.s }))
+func (b *ArrayIntBuilder) sort() {
+	sort.Sort(sparseArrayIntSorter(func() *ArrayInt { return b.s }))
 	b.shouldSort = false
 }
 
-type sparseArrayIntSorter func() *SparseArrayInt
+type sparseArrayIntSorter func() *ArrayInt
 
 func (s sparseArrayIntSorter) Len() int {
 	return s().Size()
 }
 
 func (s sparseArrayIntSorter) Less(i, j int) bool {
-	keys := s().keys.slice
-	return keys[i] < keys[j]
+	keys := s().keys
+	return keys.Get(i) < keys.Get(j)
 }
 
 func (s sparseArrayIntSorter) Swap(i, j int) {
-	keys := s().keys.slice
-	values := s().values.slice
+	keys := s().keys
+	tmp := keys.Get(i)
+	keys.Set(i, keys.Get(j))
+	keys.Set(j, tmp)
 
-	keys[i], keys[j] = keys[j], keys[i]
-	values[i], values[j] = values[j], values[i]
+	values := s().values
+	tmp1 := values.Get(i)
+	values.Set(i, values.Get(j))
+	values.Set(j, tmp1)
 }

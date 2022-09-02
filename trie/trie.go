@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-type TrieKey = Mask
-type TrieLookupKey = uint64
+type Key = Mask
+type LookupKey = uint64
 
 // Digits returns number of digits
-func Digits(val TrieLookupKey) (count int) {
+func Digits(val LookupKey) (count int) {
 	n := val
 	for n > 0 {
 		n = n / 10
@@ -20,7 +20,7 @@ func Digits(val TrieLookupKey) (count int) {
 }
 
 // Digit returns `n'-th digit of the value where `n' is in range [ 0, value.Digits() )
-func Digit(val TrieLookupKey, place int) byte {
+func Digit(val LookupKey, place int) byte {
 	r := val % uint64(math.Pow10(place+1))
 	return byte(r / uint64(math.Pow10(place)))
 }
@@ -63,7 +63,7 @@ func (trie *Trie) string(level int, buf *strings.Builder) {
 	}
 }
 
-func (trie *Trie) Lookup(key TrieLookupKey) interface{} {
+func (trie *Trie) Lookup(key LookupKey) interface{} {
 	digits := Digits(key)
 
 	// Try to force stack allocation
@@ -105,7 +105,7 @@ func (trie *Trie) Lookup(key TrieLookupKey) interface{} {
 	return nil
 }
 
-func (trie *Trie) Put(key TrieKey, value interface{}) bool {
+func (trie *Trie) Put(key Key, value interface{}) bool {
 	digits := key.Len()
 
 	node := trie

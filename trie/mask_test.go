@@ -1,7 +1,6 @@
 package trie
 
 import (
-	// "gomno/pkg/msisdn"
 	"testing"
 
 	"github.com/stretchr/testify/assert"

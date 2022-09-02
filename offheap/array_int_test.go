@@ -6,7 +6,7 @@ import (
 )
 
 func TestOffHeapArrayInt(t *testing.T) {
-	a := NewOffHeapArrayInt(4)
+	a := NewArrayInt(4)
 
 	assert.Equal(t, 0, a.Len())
 	assert.Equal(t, 4, a.Cap())

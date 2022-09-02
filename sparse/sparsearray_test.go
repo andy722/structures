@@ -35,7 +35,7 @@ func TestSparseArray_Add_Simple(t *testing.T) {
 }
 
 func TestSparseArrayBuilder_Delete(t *testing.T) {
-	b := NewSparseArrayBuilder()
+	b := NewArrayInterfaceBuilder()
 
 	b.Add(1, "1")
 	b.Add(5, "5")
@@ -57,26 +57,26 @@ func TestSparseArrayBuilder_Add(t *testing.T) {
 	n := 5000
 
 	items := pseudoRandomArray(n)
-	b := NewSparseArrayBuilder()
+	b := NewArrayInterfaceBuilder()
 	for i, v := range items {
-		b.Add(SparseArrayKey(v), i)
+		b.Add(ArrayInterfaceKey(v), i)
 	}
 
 	s := b.Build()
 	for i, v := range items {
-		assert.Equal(t, i, s.Get(SparseArrayKey(v)))
+		assert.Equal(t, i, s.Get(ArrayInterfaceKey(v)))
 	}
 }
 
 func BenchmarkSparseArrayBuilder_Add(b *testing.B) {
-	s := NewSparseArrayBuilder()
+	s := NewArrayInterfaceBuilder()
 	items := pseudoRandomArray(b.N)
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i, v := range items {
-		s.Add(SparseArrayKey(v), i)
+		s.Add(ArrayInterfaceKey(v), i)
 	}
 
 	_ = s.Build()
@@ -85,27 +85,27 @@ func BenchmarkSparseArrayBuilder_Add(b *testing.B) {
 func BenchmarkSparseArrayBuilder_Delete(b *testing.B) {
 	items := pseudoRandomArray(b.N + 1)
 
-	s := NewSparseArrayBuilder()
+	s := NewArrayInterfaceBuilder()
 	for i, v := range items {
-		s.Add(SparseArrayKey(v), i)
+		s.Add(ArrayInterfaceKey(v), i)
 	}
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for _, v := range items {
-		s.Delete(SparseArrayKey(v))
+		s.Delete(ArrayInterfaceKey(v))
 	}
 
 	_ = s.Build()
 }
 
 func BenchmarkSparseArrayBuilder_Lookup(b *testing.B) {
-	s := NewSparseArrayBuilder()
+	s := NewArrayInterfaceBuilder()
 	items := pseudoRandomArray(b.N)
 
 	for i, v := range items {
-		s.Add(SparseArrayKey(v), i)
+		s.Add(ArrayInterfaceKey(v), i)
 	}
 
 	a := s.Build()
@@ -114,7 +114,7 @@ func BenchmarkSparseArrayBuilder_Lookup(b *testing.B) {
 	b.ReportAllocs()
 
 	for _, v := range items {
-		a.Get(SparseArrayKey(v))
+		a.Get(ArrayInterfaceKey(v))
 	}
 }
 
